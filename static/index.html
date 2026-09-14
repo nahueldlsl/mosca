@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AlphaFly: Truco Uruguayo & Conectoma en Tiempo Real 🇺🇾🧠</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="brand">
+        <div class="brand-icon">🧠</div>
+        <div>
+          <h1>ALPHATRUCO <span class="tag-bio">DROSOPHILA v1.0</span></h1>
+          <p class="subtitle">Conectoma FlyEM Male CNS &bull; Red Biológica Mushroom Body (500 KC &times; 24 MBON)</p>
+        </div>
+      </div>
+
+      <!-- Tanteador -->
+      <div class="scoreboard-container">
+        <div class="score-card player-score">
+          <span class="score-label">TÚ (HUMANO)</span>
+          <span class="score-value" id="human-score">0</span>
+          <div class="score-bar"><div class="score-fill" id="human-bar" style="width: 0%"></div></div>
+        </div>
+        <div class="score-divider">
+          <div class="target-select-wrapper" title="Modificar límite del Chico (15 o 30 pts)">
+            <select id="target-score-select" class="target-select">
+              <option value="15">A 15 PTS</option>
+              <option value="30">A 30 PTS</option>
+            </select>
+          </div>
+          <span class="vs-badge">VS</span>
+        </div>
+        <div class="score-card fly-score">
+          <span class="score-label">CEREBRO MOSCA</span>
+          <span class="score-value" id="fly-score">0</span>
+          <div class="score-bar"><div class="score-fill fly-fill" id="fly-bar" style="width: 0%"></div></div>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="nav-tabs">
+        <button class="nav-tab active" data-tab="game-tab">🎴 Mesa de Truco</button>
+        <button class="nav-tab" data-tab="connectome-tab">🔬 Conectoma en Vivo</button>
+        <button class="nav-tab" data-tab="training-tab">⚡ Gimnasio Mosca</button>
+      </nav>
+    </header>
+
+    <!-- Main Content Tabs -->
+    <main class="main-content">
+      <!-- TAB 1: Mesa de Truco -->
+      <div class="tab-pane active" id="game-tab">
+        <div class="game-grid">
+          <!-- Columna Izquierda: Mesa de Juego -->
+          <div class="table-column">
+            <!-- Zona Mosca (Oponente) -->
+            <div class="fly-opponent-zone">
+              <div class="fly-avatar-card">
+                <div class="fly-avatar" id="fly-avatar">🪰</div>
+                <div class="fly-meta">
+                  <div class="fly-name">AlphaFly (Male CNS v1.0)</div>
+                  <div class="fly-status" id="fly-status-text">Zumbando... Esperando jugada</div>
+                </div>
+              </div>
+              <div class="fly-cards-hand" id="fly-hand">
+                <!-- Cartas de la mosca boca abajo -->
+              </div>
+            </div>
+
+            <!-- Centro: Tapete de Juego -->
+            <div class="mat-center">
+              <!-- Muestra lateral -->
+              <div class="muestra-dock">
+                <div class="dock-title">LA MUESTRA</div>
+                <div class="muestra-card-wrapper" id="muestra-container">
+                  <!-- Render de la muestra -->
+                </div>
+                <div class="piezas-info" id="piezas-info">
+                  <!-- Piezas del palo -->
+                </div>
+              </div>
+
+              <!-- Las 3 Bazas -->
+              <div class="tricks-board">
+                <div class="board-header">
+                  <div class="stake-badge" id="stake-badge">Nivel: Sin Canto (1 pt)</div>
+                  <div class="hand-meta-badge" id="hand-meta-badge">Mano #1 &bull; Tú eres Mano</div>
+                </div>
+
+                <div class="tricks-container">
+                  <div class="trick-slot" id="trick-slot-0">
+                    <div class="trick-label">BAZA 1</div>
+                    <div class="trick-cards" id="trick-cards-0"></div>
+                    <div class="trick-winner-badge" id="trick-winner-0"></div>
+                  </div>
+                  <div class="trick-slot" id="trick-slot-1">
+                    <div class="trick-label">BAZA 2</div>
+                    <div class="trick-cards" id="trick-cards-1"></div>
+                    <div class="trick-winner-badge" id="trick-winner-1"></div>
+                  </div>
+                  <div class="trick-slot" id="trick-slot-2">
+                    <div class="trick-label">BAZA 3</div>
+                    <div class="trick-cards" id="trick-cards-2"></div>
+                    <div class="trick-winner-badge" id="trick-winner-2"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Zona Jugador Humano -->
+            <div class="human-player-zone">
+              <div class="hand-header">
+                <div class="hand-meta-left">
+                  <div class="hand-label">TUS CARTAS (Haz clic para jugar):</div>
+                  <div class="envido-badge" id="human-envido-badge">🔥 Tantos: --</div>
+                </div>
+                <div class="turn-banner" id="turn-banner">🟢 Tu turno de jugar carta</div>
+              </div>
+              <div class="human-cards-hand" id="human-hand">
+                <!-- Cartas del humano -->
+              </div>
+            </div>
+
+            <!-- Barra de Acciones -->
+            <div class="action-bar" id="action-bar">
+              <button class="btn btn-envido" id="btn-envido">Cantar Envido</button>
+              <button class="btn btn-truco" id="btn-truco">Cantar Truco (2 pts)</button>
+              <button class="btn btn-retruco" id="btn-retruco" style="display:none;">¡Re-truco! (3 pts)</button>
+              <button class="btn btn-vale4" id="btn-vale4" style="display:none;">¡Vale 4! (4 pts)</button>
+              <button class="btn btn-fold" id="btn-fold">Irse al Mazo</button>
+              <button class="btn btn-next-hand" id="btn-next-hand" style="display:none;">Siguiente Mano &rarr;</button>
+              <button class="btn btn-reset" id="btn-reset">Nueva Partida</button>
+            </div>
+          </div>
+
+          <!-- Columna Derecha: Telemetría Rápida y Log -->
+          <div class="telemetry-column">
+            <!-- Telemetría Neuronal en Tiempo Real -->
+            <div class="panel telemetry-panel">
+              <div class="panel-header">
+                <h3>🧠 ACTIVIDAD NEURONAL EN VIVO</h3>
+                <span class="sparse-badge" id="sparse-badge">0% KC Activas</span>
+              </div>
+              <div class="mini-canvas-container">
+                <canvas id="mini-kc-canvas" width="340" height="230"></canvas>
+                <div class="canvas-legend">
+                  <span><span class="dot dot-active"></span> Disparo KC</span>
+                  <span><span class="dot dot-silent"></span> Inhibida</span>
+                </div>
+              </div>
+
+              <!-- Medidores de Impulso MBON -->
+              <div class="drives-container">
+                <div class="drive-row">
+                  <span class="drive-name">Impulso Truco:</span>
+                  <div class="drive-meter"><div class="drive-bar" id="drive-truco" style="width: 0%"></div></div>
+                  <span class="drive-val" id="val-truco">0%</span>
+                </div>
+                <div class="drive-row">
+                  <span class="drive-name">Re-truco / Vale 4:</span>
+                  <div class="drive-meter"><div class="drive-bar retruco-bar" id="drive-retruco" style="width: 0%"></div></div>
+                  <span class="drive-val" id="val-retruco">0%</span>
+                </div>
+                <div class="drive-row">
+                  <span class="drive-name">Aceptación (Quiero):</span>
+                  <div class="drive-meter"><div class="drive-bar accept-bar" id="drive-accept" style="width: 0%"></div></div>
+                  <span class="drive-val" id="val-accept">0%</span>
+                </div>
+                <div class="drive-row">
+                  <span class="drive-name">Envido:</span>
+                  <div class="drive-meter"><div class="drive-bar envido-bar" id="drive-envido" style="width: 0%"></div></div>
+                  <span class="drive-val" id="val-envido">0%</span>
+                </div>
+              </div>
+
+              <!-- Dopamina PAM vs PPL1 -->
+              <div class="dopamine-monitor">
+                <div class="dop-title">MODULACIÓN DOPAMINÉRGICA:</div>
+                <div class="dop-display">
+                  <div class="dop-badge pam-badge" id="dop-pam">🍬 PAM (Recompensa): +0.0</div>
+                  <div class="dop-badge ppl1-badge" id="dop-ppl1">⚡ PPL1 (Aversión): 0.0</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Registro de Jugadas -->
+            <div class="panel log-panel">
+              <div class="panel-header">
+                <h3>📜 REGISTRO DE LA MANO</h3>
+              </div>
+              <div class="log-entries" id="game-log"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 2: Laboratorio de Conectoma Completo -->
+      <div class="tab-pane" id="connectome-tab">
+        <div class="connectome-grid">
+          <div class="panel full-canvas-panel">
+            <div class="panel-header">
+              <h2>🔬 MAPA MORFOLÓGICO Y CONECTOMA DE 500 CÉLULAS DE KENYON (KC)</h2>
+              <span class="info-badge">Male CNS v1.0 &bull; FlyEM Janelia</span>
+            </div>
+            <p class="canvas-desc">Visualización topológica del Mushroom Body de <i>Drosophila</i>: Cáliz (entrada PN), Pedúnculo y Lóbulos Vertical (Alfa/Alfa') y Medial (Beta/Gamma). Las KCs que disparan en la jugada actual se iluminan con bioluminiscencia.</p>
+            <div class="canvas-wrapper">
+              <canvas id="large-kc-canvas" width="760" height="520"></canvas>
+              <div id="kc-tooltip" class="kc-tooltip"></div>
+            </div>
+          </div>
+
+          <div class="connectome-side-panel">
+            <div class="panel">
+              <div class="panel-header">
+                <h3>⚡ 16 ENTRADAS SENSORIALES (PN)</h3>
+              </div>
+              <div class="inputs-list" id="inputs-list">
+                <!-- Se llena dinámicamente -->
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-header">
+                <h3>📊 DISPARO DE 24 MBONs</h3>
+              </div>
+              <div class="mbon-bars" id="mbon-bars-container">
+                <!-- Barras MBON -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 3: Gimnasio de Entrenamiento -->
+      <div class="tab-pane" id="training-tab">
+        <div class="training-container">
+          <div class="panel training-controls-panel">
+            <div class="panel-header">
+              <h2>⚡ GIMNASIO DE LA MOSCA: ENSEÑARLE A JUGAR AL TRUCO</h2>
+            </div>
+            <p>Entrena el cerebro biológico de la mosca usando <b>Plasticidad Sináptica de 3 Factores (KC &times; MBON &times; Dopamina)</b> jugando contra el Bot Heurístico Gaucho con soporte completo de Re-truco y Vale 4.</p>
+
+            <div class="train-form">
+              <div class="form-group">
+                <label for="train-episodes">Número de Manos a Entrenar:</label>
+                <select id="train-episodes">
+                  <option value="100">100 Manos (Rápido ~ 0.5s)</option>
+                  <option value="300" selected>300 Manos (Recomendado ~ 1.5s)</option>
+                  <option value="600">600 Manos (Profundo ~ 3.0s)</option>
+                  <option value="1200">1200 Manos (Gran Maestro ~ 6.0s)</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="train-lr">Tasa de Aprendizaje Dopaminérgico (Learning Rate):</label>
+                <select id="train-lr">
+                  <option value="0.008">0.008 (Conservador)</option>
+                  <option value="0.015" selected>0.015 (Equilibrado)</option>
+                  <option value="0.030">0.030 (Agresivo)</option>
+                </select>
+              </div>
+
+              <div class="train-buttons">
+                <button class="btn btn-train-now" id="btn-train-now">🚀 ¡ENTRENAR MOSCA AHORA!</button>
+                <button class="btn btn-reset-brain" id="btn-reset-brain">🧬 Restaurar Conectoma Vírgen</button>
+              </div>
+            </div>
+
+            <div class="training-status" id="train-status" style="display:none;">
+              <div class="spinner"></div>
+              <span id="train-status-text">Simulando partidas de Truco en el conectoma...</span>
+            </div>
+
+            <!-- Resultados del Entrenamiento -->
+            <div class="train-results" id="train-results" style="display:none;">
+              <h3>📈 RESULTADOS DEL ENTRENAMIENTO</h3>
+              <div class="results-stats">
+                <div class="res-card">
+                  <span class="res-label">Manos Entrenadas:</span>
+                  <span class="res-val" id="res-episodes">0</span>
+                </div>
+                <div class="res-card">
+                  <span class="res-label">Tasa Final de Victorias:</span>
+                  <span class="res-val" id="res-winrate">0%</span>
+                </div>
+                <div class="res-card">
+                  <span class="res-label">Puntos Totales Mosca:</span>
+                  <span class="res-val" id="res-flypts">0</span>
+                </div>
+                <div class="res-card">
+                  <span class="res-label">Dopamina Total PAM:</span>
+                  <span class="res-val" id="res-dopamine">0.0</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Modal para respuestas a envites de la mosca -->
+    <div class="modal-overlay" id="prompt-modal" style="display:none;">
+      <div class="modal-card">
+        <div class="modal-icon">🐝</div>
+        <h2 id="modal-title">La mosca cantó ENVIDO</h2>
+        <p id="modal-desc">¿Cuál es tu respuesta?</p>
+
+        <!-- Vista previa de tus cartas y tantos -->
+        <div class="modal-preview-box" id="modal-preview-box">
+          <div class="modal-preview-header">
+            <span class="modal-preview-title">Tus Cartas & Muestra:</span>
+            <span class="modal-preview-score" id="modal-preview-score">Tantos: --</span>
+          </div>
+          <div class="modal-preview-cards" id="modal-preview-cards">
+            <!-- Render dinámico de cartas del humano y muestra -->
+          </div>
+        </div>
+
+        <div class="modal-actions" id="modal-actions"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
