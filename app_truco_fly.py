@@ -634,16 +634,25 @@ def respond_truco(req: RespondTrucoReq):
 
     if req.action == "no_quiero":
         surrender_pts = TRUCO_REJECT_POINTS.get(target_lvl, 1)
-        game_session.add_log(f"Te fuiste al mazo. La mosca suma {surrender_pts} punto(s).", "loss")
+        if getattr(game_session.fly, "is_bluffing", False):
+            fly_cards_labels = ", ".join([card_label(c, game_session.muestra) for c in game_session.fly_cards])
+            game_session.add_log(f"🃏 ¡LA MOSCA TE METIÓ UN FAROL! Te robó {surrender_pts} pt(s) mintiendo con: {fly_cards_labels}", "bluff")
+            game_session.fly.apply_dopamine_reward(2.5)
+        else:
+            game_session.add_log(f"Te fuiste al mazo. La mosca suma {surrender_pts} punto(s).", "loss")
+            game_session.fly.apply_dopamine_reward(1.0)
         game_session.fly_score += surrender_pts
-        game_session.fly.apply_dopamine_reward(1.0)
         game_session.hand_over = True
         return game_session.get_state()
 
     elif req.action == "quiero":
         game_session.truco_level = target_lvl
         game_session.canto_holder = 0 # Humano tiene derecho a subir en la siguiente baza
-        game_session.add_log(f"Tú dijiste: ¡QUIERO! (Mano vale {TRUCO_VALUES[target_lvl]} puntos)", "truco")
+        if getattr(game_session.fly, "is_bluffing", False):
+            game_session.add_log("⚡ ¡Aceptaste el desafío! La mosca estaba faroleando e intentará defenderse.", "truco")
+            game_session.fly.apply_dopamine_reward(-1.5)
+        else:
+            game_session.add_log(f"Tú dijiste: ¡QUIERO! (Mano vale {TRUCO_VALUES[target_lvl]} puntos)", "truco")
 
         # Reanudación obligatoria de la carta de la mosca:
         baza = game_session.table_cards[game_session.trick_idx]
@@ -784,9 +793,14 @@ def respond_envido(req: RespondEnvidoReq):
                 game_session.add_log(">> Empate en Envido: Mosca gana por ser mano (+2 pts)", "loss")
                 game_session.fly.apply_dopamine_reward(1.5)
     else:
-        game_session.add_log("Tú dices: No quiero. La mosca suma 1 punto.", "loss")
+        f_env = calculate_envido(game_session.fly_cards, game_session.muestra)
+        if f_env < 24:
+            game_session.add_log(f"🃏 ¡LA MOSCA TE METIÓ UN FAROL! Cantó Envido con solo {f_env} tantos y te robó 1 punto.", "bluff")
+            game_session.fly.apply_dopamine_reward(2.0)
+        else:
+            game_session.add_log("Tú dices: No quiero. La mosca suma 1 punto.", "loss")
+            game_session.fly.apply_dopamine_reward(0.8)
         game_session.fly_score += 1
-        game_session.fly.apply_dopamine_reward(0.8)
 
     game_session.envido_state = "RESOLVED"
 
@@ -803,9 +817,14 @@ def fold():
         return game_session.get_state()
 
     p_loss = TRUCO_VALUES.get(game_session.truco_level, 1)
-    game_session.add_log(f"Te fuiste al mazo. La mosca suma {p_loss} punto(s).", "loss")
+    if getattr(game_session.fly, "is_bluffing", False):
+        fly_cards_labels = ", ".join([card_label(c, game_session.muestra) for c in game_session.fly_cards])
+        game_session.add_log(f"🃏 ¡LA MOSCA TE METIÓ UN FAROL! Te fuiste al mazo y te robó {p_loss} pt(s) mintiendo con: {fly_cards_labels}", "bluff")
+        game_session.fly.apply_dopamine_reward(2.5)
+    else:
+        game_session.add_log(f"Te fuiste al mazo. La mosca suma {p_loss} punto(s).", "loss")
+        game_session.fly.apply_dopamine_reward(1.0)
     game_session.fly_score += p_loss
-    game_session.fly.apply_dopamine_reward(1.0)
     game_session.hand_over = True
     return game_session.get_state()
 

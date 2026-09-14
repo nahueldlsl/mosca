@@ -324,6 +324,20 @@ function renderUI(redrawCanvases = true) {
     setMeter("drive-retruco", "val-retruco", d.retruco || d.vale4);
     setMeter("drive-accept", "val-accept", d.accept_truco);
     setMeter("drive-envido", "val-envido", d.envido);
+    setMeter("drive-bluff", "val-bluff", d.bluff !== undefined ? d.bluff : 0.12);
+
+    const stratBadge = document.getElementById("cognitive-strategy-badge");
+    if (stratBadge && gameState.telemetry.cognitive_strategy) {
+      stratBadge.innerText = gameState.telemetry.cognitive_text || "🟡 Cauto";
+      stratBadge.className = "strategy-badge";
+      if (gameState.telemetry.cognitive_strategy === "FAROL") {
+        stratBadge.classList.add("strategy-bluff");
+      } else if (gameState.telemetry.cognitive_strategy === "VALOR") {
+        stratBadge.classList.add("strategy-valor");
+      } else {
+        stratBadge.classList.add("strategy-defense");
+      }
+    }
 
     const dop = gameState.telemetry.last_dopamine || 0;
     if (dop > 0) {

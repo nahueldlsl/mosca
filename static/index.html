@@ -145,7 +145,10 @@
             <div class="panel telemetry-panel">
               <div class="panel-header">
                 <h3>🧠 ACTIVIDAD NEURONAL EN VIVO</h3>
-                <span class="sparse-badge" id="sparse-badge">0% KC Activas</span>
+                <div class="telemetry-badges">
+                  <span class="strategy-badge strategy-defense" id="cognitive-strategy-badge">🟡 Cauto</span>
+                  <span class="sparse-badge" id="sparse-badge">0% KC Activas</span>
+                </div>
               </div>
               <div class="mini-canvas-container">
                 <canvas id="mini-kc-canvas" width="340" height="230"></canvas>
@@ -176,6 +179,11 @@
                   <span class="drive-name">Envido:</span>
                   <div class="drive-meter"><div class="drive-bar envido-bar" id="drive-envido" style="width: 0%"></div></div>
                   <span class="drive-val" id="val-envido">0%</span>
+                </div>
+                <div class="drive-row">
+                  <span class="drive-name">🃏 Audacia / Farol:</span>
+                  <div class="drive-meter"><div class="drive-bar bluff-bar" id="drive-bluff" style="width: 0%"></div></div>
+                  <span class="drive-val" id="val-bluff">0%</span>
                 </div>
               </div>
 

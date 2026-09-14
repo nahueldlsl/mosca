@@ -83,6 +83,7 @@ class FlyBrainTrucoAgent:
         # Trazas de elegibilidad para asignación temporal de crédito (Dopamina retroactiva)
         self.eligibility = np.zeros_like(self.W)
         self.dopamine_history = []
+        self.is_bluffing = False
 
     def encode_state(self, hand: List[Card], muestra: Card, table_cards: List[Card],
                      trick_idx: int, truco_level: int, envido_called: bool) -> np.ndarray:
@@ -165,12 +166,25 @@ class FlyBrainTrucoAgent:
         return chosen_idx
 
     def decide_truco(self, state_vec: np.ndarray) -> bool:
-        """MBON 3 y 4 deciden si cantar Truco inicial."""
+        """MBON 3 y 4 deciden si cantar Truco inicial (con componente táctico de Farol)."""
         kc_act, mbon_act = self.forward(state_vec)
-        # MBON 3: Cantar Truco, MBON 4: Mantener silencio
         diff = mbon_act[3] - mbon_act[4]
-        prob_call = 1.0 / (1.0 + np.exp(-diff * 2.0))
-        choice = bool(np.random.rand() < prob_call)
+        
+        # Evaluar poder de cartas en mano (primeras 3 entradas de state_vec, normalizadas 0..1)
+        max_card_pow = max(state_vec[:3]) * 100.0 if len(state_vec) >= 3 else 50.0
+        is_weak_hand = (max_card_pow < 75.0)
+
+        # Farol Táctico (Nash Equilibrium ~14% en manos débiles):
+        bluff_trigger = bool(is_weak_hand and np.random.rand() < 0.14)
+
+        if bluff_trigger:
+            self.is_bluffing = True
+            choice = True
+        else:
+            self.is_bluffing = False
+            prob_call = 1.0 / (1.0 + np.exp(-diff * 2.0))
+            choice = bool(np.random.rand() < prob_call)
+
         grad = np.zeros_like(self.W)
         grad[:, 3 if choice else 4] = kc_act
         self.eligibility = 0.9 * self.eligibility + grad
@@ -213,11 +227,21 @@ class FlyBrainTrucoAgent:
     def decide_truco_response(self, state_vec: np.ndarray, current_level: int) -> str:
         """
         Determina la respuesta de la mosca ante un envite de Truco, Re-truco o Vale 4:
-        - current_level == 1 (Truco): 'no_quiero', 'quiero', o 'retruco'.
+        - current_level == 1 (Truco): 'no_quiero', 'quiero', o 'retruco' (contra-farol posible).
         - current_level == 2 (Re-truco): 'no_quiero', 'quiero', o 'vale_4'.
         - current_level == 3 (Vale 4): 'no_quiero' o 'quiero'.
         """
         kc_act, mbon_act = self.forward(state_vec)
+        max_card_pow = max(state_vec[:3]) * 100.0 if len(state_vec) >= 3 else 50.0
+        is_weak_hand = (max_card_pow < 75.0)
+
+        # Contra-Farol Agresivo (Re-truco de farol ~12% en manos débiles):
+        if current_level == 1 and is_weak_hand and np.random.rand() < 0.12:
+            self.is_bluffing = True
+            grad = np.zeros_like(self.W)
+            grad[:, 9] = kc_act
+            self.eligibility = 0.9 * self.eligibility + grad
+            return "retruco"
 
         # Decisión base de aceptación
         diff_acc = mbon_act[5] - mbon_act[6]
@@ -225,16 +249,18 @@ class FlyBrainTrucoAgent:
         wants = bool(np.random.rand() < prob_accept)
 
         if not wants:
+            self.is_bluffing = False
             grad = np.zeros_like(self.W)
             grad[:, 6] = kc_act
             self.eligibility = 0.9 * self.eligibility + grad
             return "no_quiero"
 
-        # Si quiere, evalúa si redobla la apuesta (Raise)
+        # Si quiere, evalúa si redobla la apuesta por valor (Raise legítimo)
         if current_level == 1:
             diff_re = mbon_act[9] - mbon_act[10]
             prob_re = 1.0 / (1.0 + np.exp(-diff_re * 2.0))
             if np.random.rand() < prob_re:
+                self.is_bluffing = False
                 grad = np.zeros_like(self.W)
                 grad[:, 9] = kc_act
                 self.eligibility = 0.9 * self.eligibility + grad
@@ -243,11 +269,13 @@ class FlyBrainTrucoAgent:
             diff_v4 = mbon_act[11] - mbon_act[12]
             prob_v4 = 1.0 / (1.0 + np.exp(-diff_v4 * 2.0))
             if np.random.rand() < prob_v4:
+                self.is_bluffing = False
                 grad = np.zeros_like(self.W)
                 grad[:, 11] = kc_act
                 self.eligibility = 0.9 * self.eligibility + grad
                 return "vale_4"
 
+        self.is_bluffing = False
         grad = np.zeros_like(self.W)
         grad[:, 5] = kc_act
         self.eligibility = 0.9 * self.eligibility + grad
@@ -327,6 +355,27 @@ class FlyBrainTrucoAgent:
 
         last_dop = float(self.dopamine_history[-1]) if self.dopamine_history else 0.0
 
+        max_card_pow = max(state_vec[:3]) * 100.0 if len(state_vec) >= 3 else 50.0
+        is_weak = max_card_pow < 75.0
+
+        # Audacia / Farol: proporción de impulso agresivo con cartas bajas
+        if getattr(self, "is_bluffing", False):
+            p_bluff = 0.88 + 0.10 * np.random.rand()
+            cog_strat = "FAROL"
+            cog_text = "🟣 Farol Táctico en Curso"
+        elif is_weak and p_truco > 0.35:
+            p_bluff = float(p_truco)
+            cog_strat = "FAROL"
+            cog_text = "🟣 Propensa a Farolear"
+        elif max_card_pow >= 75.0 and p_truco > 0.4:
+            p_bluff = 0.05
+            cog_strat = "VALOR"
+            cog_text = "🟢 Jugando por Valor"
+        else:
+            p_bluff = 0.12
+            cog_strat = "DEFENSIVO"
+            cog_text = "🟡 Juego Cauto / Espera"
+
         return {
             "num_kc": int(self.num_kc),
             "num_mbon": int(self.num_mbon),
@@ -342,8 +391,12 @@ class FlyBrainTrucoAgent:
                 "accept_truco": round(p_accept, 3),
                 "envido": round(p_envido, 3),
                 "accept_envido": round(p_acc_envido, 3),
+                "bluff": round(float(p_bluff), 3),
                 "card_prefs": [round(p, 3) for p in p_cards]
             },
+            "cognitive_strategy": cog_strat,
+            "cognitive_text": cog_text,
+            "is_bluffing": bool(getattr(self, "is_bluffing", False)),
             "last_dopamine": round(last_dop, 2),
             "dopamine_history": [round(d, 2) for d in self.dopamine_history[-30:]]
         }
