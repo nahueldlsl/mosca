@@ -15,10 +15,11 @@ import pandas as pd
 from typing import List, Dict, Optional, Tuple
 from truco_engine import Card, card_power, calculate_envido, get_effective_piezas
 
-DATA_DIR = Path(r"C:\Users\nahue\OneDrive\Escritorio\UCU\Proyectos\mosca\data\flat-connectome")
+BASE_DIR = Path(__file__).resolve().parent
+DATA_DIR = BASE_DIR / "data" / "flat-connectome"
 WEIGHTS_FILE = DATA_DIR / "connectome-weights-male-cns-v1.0-minconf-0.5-traced-only.feather"
 ANN_FILE = DATA_DIR / "body-annotations-male-cns-v1.0-minconf-0.5.feather"
-CACHE_PATH = Path(r"C:\Users\nahue\OneDrive\Escritorio\UCU\Proyectos\mosca\data\mushroom_body_subcircuit.npz")
+CACHE_PATH = BASE_DIR / "data" / "mushroom_body_subcircuit.npz"
 
 def extract_or_load_subcircuit(num_kc: int = 500, num_mbon: int = 24) -> Tuple[np.ndarray, List[int], List[int]]:
     """
@@ -29,6 +30,10 @@ def extract_or_load_subcircuit(num_kc: int = 500, num_mbon: int = 24) -> Tuple[n
         return data["weights"], data["kc_ids"].tolist(), data["mbon_ids"].tolist()
 
     print("Extrayendo subcircuito biológico KC -> MBON desde el dataset de FlyEM...")
+    if not ANN_FILE.exists() or not WEIGHTS_FILE.exists():
+        raise FileNotFoundError(
+            f"No se encontró el archivo de caché ({CACHE_PATH}) ni las tablas del conectoma en {DATA_DIR}."
+        )
     ann = pd.read_feather(ANN_FILE)
     w = pd.read_feather(WEIGHTS_FILE)
 
@@ -417,14 +422,24 @@ class FlyBrainTrucoAgent:
 
     def save_model(self, filepath: str = "data/fly_truco_model.npz"):
         """Guarda la red neuronal entrenada de la mosca."""
-        Path(filepath).parent.mkdir(parents=True, exist_ok=True)
-        np.savez(filepath, W=self.W, W_pn_kc=self.W_pn_kc)
-        print(f"Modelo cerebral guardado en {filepath}")
+        target_path = Path(filepath)
+        if not target_path.is_absolute():
+            target_path = BASE_DIR / target_path
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        np.savez(str(target_path), W=self.W, W_pn_kc=self.W_pn_kc)
+        print(f"Modelo cerebral guardado en {target_path}")
 
     def load_model(self, filepath: str = "data/fly_truco_model.npz"):
         """Carga los pesos sinápticos aprendidos."""
-        if Path(filepath).exists():
-            data = np.load(filepath)
+        target_path = Path(filepath)
+        if not target_path.is_absolute() and not target_path.exists():
+            candidate = BASE_DIR / target_path
+            if candidate.exists():
+                target_path = candidate
+        if target_path.exists():
+            data = np.load(str(target_path))
             self.W = data['W']
             self.W_pn_kc = data['W_pn_kc']
-            print(f"Modelo cerebral cargado exitosamente desde {filepath}")
+            print(f"Modelo cerebral cargado exitosamente desde {target_path}")
+        else:
+            print(f"Aviso: Archivo de modelo no encontrado en {target_path}")

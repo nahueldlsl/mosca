@@ -37,9 +37,9 @@ DATA_DIR = Path(__file__).parent / "data"
 class GameSession:
     def __init__(self):
         self.fly = FlyBrainTrucoAgent()
-        model_path = "data/fly_truco_model.npz"
-        if os.path.exists(model_path):
-            self.fly.load_model(model_path)
+        model_path = DATA_DIR / "fly_truco_model.npz"
+        if model_path.exists():
+            self.fly.load_model(str(model_path))
 
         self.human_score = 0
         self.fly_score = 0
@@ -832,7 +832,7 @@ def fold():
 def train_fly(req: TrainReq):
     """Entrena el cerebro de la mosca por refuerzo dopaminérgico."""
     res = train_fly_session(game_session.fly, episodes=req.episodes, lr=req.lr)
-    game_session.fly.save_model("data/fly_truco_model.npz")
+    game_session.fly.save_model(str(DATA_DIR / "fly_truco_model.npz"))
     game_session.add_log(f"🎓 Entrenamiento completado: {req.episodes} manos. WinRate: {res['final_win_rate']}%.", "header")
     return res
 

@@ -62,7 +62,7 @@ def play_match():
     print("=" * 65)
 
     fly = FlyBrainTrucoAgent()
-    model_path = "data/fly_truco_model.npz"
+    model_path = os.path.join(os.path.dirname(__file__), "data", "fly_truco_model.npz")
     if os.path.exists(model_path):
         fly.load_model(model_path)
     else:
