@@ -145,68 +145,95 @@ def simulate_hand(fly: FlyBrainTrucoAgent, bot: HeuristicBot, fly_is_hand: bool)
         fly_envido_val = calculate_envido(fly_cards, muestra)
         bot_envido_val = calculate_envido(bot_cards, muestra)
 
-        state_envido = fly.encode_state(fly_cards, muestra, [], 0, 0, False)
-        fly_wants_envido = fly.decide_envido(state_envido)
+        st_uncalled = fly.encode_state(fly_cards, muestra, [], 0, 0, False)
+        st_called = fly.encode_state(fly_cards, muestra, [], 0, 0, True)
 
         if fly_is_hand:
-            if fly_wants_envido:
-                bot_accepts = bot.decide_accept_envido(bot_cards, muestra)
-                if bot_accepts:
-                    if fly_envido_val >= bot_envido_val:
-                        fly_pts += 2
-                        fly.apply_dopamine_reward(1.5)
-                        dopamine_earned += 1.5
-                    else:
-                        bot_pts += 2
-                        fly.apply_dopamine_reward(-1.2)
-                        dopamine_earned -= 1.2
-                else:
-                    fly_pts += 1
-                    fly.apply_dopamine_reward(0.8)
-                    dopamine_earned += 0.8
-            elif bot.decide_envido(bot_cards, muestra):
-                if fly.decide_accept_envido(state_envido):
-                    if fly_envido_val >= bot_envido_val:
-                        fly_pts += 2
-                        fly.apply_dopamine_reward(1.5)
-                        dopamine_earned += 1.5
-                    else:
-                        bot_pts += 2
-                        fly.apply_dopamine_reward(-1.2)
-                        dopamine_earned -= 1.2
-                else:
-                    bot_pts += 1
-                    fly.apply_dopamine_reward(-0.5)
-                    dopamine_earned -= 0.5
-        else:
-            if bot.decide_envido(bot_cards, muestra):
-                if fly.decide_accept_envido(state_envido):
-                    if fly_envido_val > bot_envido_val:
-                        fly_pts += 2
-                        fly.apply_dopamine_reward(1.5)
-                        dopamine_earned += 1.5
-                    else:
-                        bot_pts += 2
-                        fly.apply_dopamine_reward(-1.2)
-                        dopamine_earned -= 1.2
-                else:
-                    bot_pts += 1
-                    fly.apply_dopamine_reward(-0.5)
-                    dopamine_earned -= 0.5
-            elif fly_wants_envido:
+            # 1. Mosca es mano: decide si canta Envido
+            if fly.decide_envido(st_uncalled):
                 if bot.decide_accept_envido(bot_cards, muestra):
-                    if fly_envido_val > bot_envido_val:
+                    if fly_envido_val >= bot_envido_val:
                         fly_pts += 2
-                        fly.apply_dopamine_reward(1.5)
-                        dopamine_earned += 1.5
+                        fly.apply_dopamine_reward(2.0)
+                        dopamine_earned += 2.0
                     else:
                         bot_pts += 2
-                        fly.apply_dopamine_reward(-1.2)
-                        dopamine_earned -= 1.2
+                        penalty = -2.5 if fly_envido_val < 27 else -1.0
+                        fly.apply_dopamine_reward(penalty)
+                        dopamine_earned += penalty
                 else:
                     fly_pts += 1
                     fly.apply_dopamine_reward(0.8)
                     dopamine_earned += 0.8
+            else:
+                # Mosca no cantó. Recompensa por prudencia si tenía poco, o castigo si desperdició mano
+                if fly_envido_val < 26:
+                    fly.apply_dopamine_reward(0.3)
+                    dopamine_earned += 0.3
+                elif fly_envido_val >= 28:
+                    fly.apply_dopamine_reward(-1.0)
+                    dopamine_earned -= 1.0
+
+                # El bot puede cantar envido como segundo jugador
+                if bot.decide_envido(bot_cards, muestra):
+                    if fly.decide_accept_envido(st_called):
+                        if fly_envido_val >= bot_envido_val:
+                            fly_pts += 2
+                            fly.apply_dopamine_reward(2.0)
+                            dopamine_earned += 2.0
+                        else:
+                            bot_pts += 2
+                            penalty = -2.5 if fly_envido_val < 27 else -1.0
+                            fly.apply_dopamine_reward(penalty)
+                            dopamine_earned += penalty
+                    else:
+                        bot_pts += 1
+                        # ¡PREMIO POR FOLD INTELIGENTE!
+                        if fly_envido_val < 27:
+                            fly.apply_dopamine_reward(0.6)
+                            dopamine_earned += 0.6
+                        else:
+                            fly.apply_dopamine_reward(-2.0)
+                            dopamine_earned -= 2.0
+        else:
+            # 2. Bot es mano: decide si canta Envido primero
+            if bot.decide_envido(bot_cards, muestra):
+                if fly.decide_accept_envido(st_called):
+                    if fly_envido_val > bot_envido_val: # Bot es mano, empate gana bot
+                        fly_pts += 2
+                        fly.apply_dopamine_reward(2.0)
+                        dopamine_earned += 2.0
+                    else:
+                        bot_pts += 2
+                        penalty = -2.5 if fly_envido_val < 27 else -1.0
+                        fly.apply_dopamine_reward(penalty)
+                        dopamine_earned += penalty
+                else:
+                    bot_pts += 1
+                    # ¡PREMIO POR FOLD INTELIGENTE!
+                    if fly_envido_val < 27:
+                        fly.apply_dopamine_reward(0.6)
+                        dopamine_earned += 0.6
+                    else:
+                        fly.apply_dopamine_reward(-2.0)
+                        dopamine_earned -= 2.0
+            else:
+                # Bot no cantó. Mosca como segundo jugador puede cantar
+                if fly.decide_envido(st_uncalled):
+                    if bot.decide_accept_envido(bot_cards, muestra):
+                        if fly_envido_val > bot_envido_val:
+                            fly_pts += 2
+                            fly.apply_dopamine_reward(2.0)
+                            dopamine_earned += 2.0
+                        else:
+                            bot_pts += 2
+                            penalty = -2.5 if fly_envido_val < 27 else -1.0
+                            fly.apply_dopamine_reward(penalty)
+                            dopamine_earned += penalty
+                    else:
+                        fly_pts += 1
+                        fly.apply_dopamine_reward(0.8)
+                        dopamine_earned += 0.8
 
     # 3. FASE DE TRUCO (3 BAZAS CON ESCALERA COMPLETA: TRUCO, RE-TRUCO, VALE 4)
     trick_wins = []

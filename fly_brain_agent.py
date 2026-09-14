@@ -102,8 +102,9 @@ class FlyBrainTrucoAgent:
             else:
                 vec[i] = 0.0
 
-        # 2. Puntos de envido propios (normalizado 0..1 sobre 60 pts posibles)
-        vec[3] = calculate_envido(hand, muestra) / 60.0
+        # 2. Puntos de envido propios (normalizado 0..1 sobre 37 pts máximos reales)
+        pts_env = calculate_envido(hand, muestra) if hand and muestra else 0
+        vec[3] = float(np.clip(pts_env / 37.0, 0.0, 1.0))
 
         # 3. ¿La muestra es pieza?
         piezas = get_effective_piezas(muestra)
@@ -268,6 +269,14 @@ class FlyBrainTrucoAgent:
         """MBON 7 y 8 deciden si cantar Envido."""
         kc_act, mbon_act = self.forward(state_vec)
         diff = mbon_act[7] - mbon_act[8]
+
+        # Modulación biológica por umbral de tantos (Sensory Gating):
+        envido_norm = state_vec[3] if len(state_vec) > 3 else 0.5
+        if envido_norm < (26.0 / 37.0):
+            diff -= 6.0 # Freno absoluto a cantar con mano baja (<26)
+        elif envido_norm >= (28.0 / 37.0):
+            diff += 4.0 # Impulso a cantar con mano buena (>=28)
+
         prob_envido = 1.0 / (1.0 + np.exp(-diff * 2.0))
         choice = bool(np.random.rand() < prob_envido)
         grad = np.zeros_like(self.W)
@@ -279,6 +288,16 @@ class FlyBrainTrucoAgent:
         """MBON 13 y 14 deciden si aceptar Envido (Quiero) o rechazar (No Quiero)."""
         kc_act, mbon_act = self.forward(state_vec)
         diff = mbon_act[13] - mbon_act[14]
+
+        # Modulación biológica por umbral de tantos:
+        envido_norm = state_vec[3] if len(state_vec) > 3 else 0.5
+        if envido_norm < (24.0 / 37.0):
+            # Mano baja/basura (<24 tantos): fuerte aversión / rechazo total
+            diff -= 6.0
+        elif envido_norm >= (28.0 / 37.0):
+            # Mano alta (>=28 tantos): fuerte impulso apetitivo de aceptación
+            diff += 3.5 + 2.5 * (envido_norm - 28.0 / 37.0)
+
         prob = 1.0 / (1.0 + np.exp(-diff * 2.0))
         choice = bool(np.random.rand() < prob)
         grad = np.zeros_like(self.W)

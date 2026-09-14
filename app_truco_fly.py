@@ -721,7 +721,7 @@ def call_envido():
         raise HTTPException(status_code=400, detail="No puedes cantar Envido ahora.")
 
     game_session.add_log("✋ Tú anuncias: ¡¡ENVIDO!! (2 puntos)", "truco")
-    st = game_session.fly.encode_state(game_session.fly_cards, game_session.muestra, [], 0, 0, False)
+    st = game_session.fly.encode_state(game_session.fly_cards, game_session.muestra, [], 0, 0, True)
     game_session.latest_telemetry = game_session.fly.get_detailed_telemetry(st)
 
     if game_session.fly.decide_accept_envido(st):
